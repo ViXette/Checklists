@@ -1,7 +1,7 @@
 import UIKit
 
 
-class ChecklistVC: UITableViewController {
+class ChecklistVC: UITableViewController, ItemDetailTVCDelegate {
 	
 	var items: [ChecklistItem]
 
@@ -40,6 +40,8 @@ class ChecklistVC: UITableViewController {
 	
 	override func viewDidLoad() {
 		super.viewDidLoad()
+		
+		//navigationController?.navigationBar.prefersLargeTitles = true
 	}
 	
 	
@@ -59,8 +61,8 @@ class ChecklistVC: UITableViewController {
 		
 		return cell
 	}
-	
-	
+
+
 	override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 		if let cell = tableView.cellForRow(at: indexPath) {
 			let item = items[indexPath.row]
@@ -73,6 +75,15 @@ class ChecklistVC: UITableViewController {
 	}
 	
 	
+	override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCellEditingStyle, forRowAt indexPath: IndexPath) {
+		items.remove(at: indexPath.row)
+		
+		// let indexPaths = [indexPath]
+		// tableView.deleteRows(at: indexPaths, with: .automatic)
+		tableView.reloadData()
+	}
+	
+	
 	func configureText (for cell: UITableViewCell, with item: ChecklistItem) {
 		let label = cell.viewWithTag(1000) as! UILabel
 		label.text = item.text
@@ -80,7 +91,70 @@ class ChecklistVC: UITableViewController {
 	
 	
 	func configureCheckmark (for cell: UITableViewCell, with item: ChecklistItem) {
-		cell.accessoryType = item.checked ? .checkmark : .none
+		let label = cell.viewWithTag(1001) as! UILabel
+
+		//cell.accessoryType = item.checked ? .checkmark : .none
+		label.text = item.checked ? "√" : ""
+	}
+
+
+	@IBAction func addTapped(_ sender: UIBarButtonItem) {
+		let newRowIndex = items.count
+		
+		let item = ChecklistItem()
+		item.text = "It's new row"
+		item.checked = false
+		
+		items.append(item)
+		
+		let indexPath = IndexPath(row: newRowIndex, section: 0)
+		let indexPaths = [indexPath]
+		tableView.insertRows(at: indexPaths, with: .automatic)
+	}
+	
+	
+	func itemDetailTVCDidCancel(_ controller: ItemDetailTVC) {
+		navigationController?.popViewController(animated: true)
+	}
+	
+	
+	func itemDetailTVC(_ controller: ItemDetailTVC, didFinishAdding item: ChecklistItem) {
+		let newRowIndex = items.count
+
+		items.append(item)
+
+		let indexPath = IndexPath(row: newRowIndex, section: 0)
+		let indexPaths = [indexPath]
+
+		tableView.insertRows(at: indexPaths, with: .automatic)
+
+		navigationController?.popViewController(animated: true)
+	}
+
+
+	func itemDetailTVC (_ controller: ItemDetailTVC, didFinishEditing item: ChecklistItem) {
+		if let index = items.index(of: item) {
+			let indexPath = IndexPath(row: index, section: 0)
+			if let cell = tableView.cellForRow(at: indexPath) {
+				configureText(for: cell, with: item)
+			}
+		}
+
+		navigationController?.popViewController(animated: true)
+	}
+
+
+	override func prepare (for segue: UIStoryboardSegue, sender: Any?) {
+		if segue.identifier == "toitemDetailTVC" || segue.identifier == "EditItem" {
+			let controller = segue.destination as! ItemDetailTVC
+			controller.delegate = self
+
+			if segue.identifier == "EditItem" {
+				if let indexPath = tableView.indexPath(for: sender as! UITableViewCell) {
+					controller.itemToEdit = items[indexPath.row]
+				}
+			}
+		}
 	}
 
 }
